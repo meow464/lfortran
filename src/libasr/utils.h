@@ -2,7 +2,10 @@
 #define LIBASR_UTILS_H
 
 #include <string>
+#include <filesystem>
 #include <libasr/containers.h>
+
+using namespace std;
 
 namespace LFortran {
 
@@ -17,6 +20,7 @@ enum Platform {
 Platform get_platform();
 
 struct CompilerOptions {
+    std::filesystem::path mod_files_dir;
     bool fixed_form = false;
     bool c_preprocessor = false;
     std::vector<std::string> c_preprocessor_defines;
