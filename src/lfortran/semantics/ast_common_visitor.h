@@ -2541,7 +2541,8 @@ public:
         }
     }
 
-    ASR::symbol_t* resolve_intrinsic_function(const Location &loc, const std::string &remote_sym) {
+    ASR::symbol_t* resolve_intrinsic_function(const Location &loc, const std::string &remote_sym,
+			 const CompilerOptions &compiler_options) {
         if (!intrinsic_procedures.is_intrinsic(remote_sym)) {
             throw SemanticError("Function '" + remote_sym + "' not found"
                 " or not implemented yet (if it is intrinsic)",
@@ -2552,7 +2553,7 @@ public:
         SymbolTable *tu_symtab = ASRUtils::get_tu_symtab(current_scope);
         std::string rl_path = get_runtime_library_dir();
         ASR::Module_t *m = ASRUtils::load_module(al, tu_symtab, module_name,
-	loc, true, rl_path, const CompilerOptions &compiler_options, true,
+	loc, true, rl_path, compiler_options, true,
                 [&](const std::string &msg, const Location &loc) { throw SemanticError(msg, loc); }
                 );
 

@@ -1060,7 +1060,7 @@ public:
         return ASR::make_CPtrToPointer_t(al, x.base.base.loc, cptr, fptr, shape);
     }
 
-    void visit_SubroutineCall(const AST::SubroutineCall_t &x) {
+    void visit_SubroutineCall(const AST::SubroutineCall_t &x, const CompilerOptions &compiler_options) {
         SymbolTable* scope = current_scope;
         std::string sub_name = to_lower(x.m_name);
         ASR::symbol_t *original_sym;
@@ -1077,7 +1077,7 @@ public:
             original_sym = current_scope->resolve_symbol(sub_name);
         }
         if (!original_sym) {
-            original_sym = resolve_intrinsic_function(x.base.base.loc, sub_name);
+            original_sym = resolve_intrinsic_function(x.base.base.loc, sub_name, compiler_options);
         }
         ASR::symbol_t *sym = ASRUtils::symbol_get_past_external(original_sym);
         if (ASR::is_a<ASR::Function_t>(*sym)) {

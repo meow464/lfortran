@@ -166,7 +166,7 @@ public:
     }
 
     template <typename T, typename R>
-    void visit_ModuleSubmoduleCommon(const T &x, std::string parent_name="") {
+    void visit_ModuleSubmoduleCommon(const T &x, const CompilerOptions &compiler_options, std::string parent_name="") {
         assgn_proc_names.clear();
         SymbolTable *parent_scope = current_scope;
         current_scope = al.make_new<SymbolTable>(parent_scope);
@@ -183,7 +183,7 @@ public:
             std::string rl_path = get_runtime_library_dir();
             ASR::symbol_t* submod_parent = (ASR::symbol_t*)(ASRUtils::load_module(al, global_scope,
                                                 parent_name, x.base.base.loc, false,
-                                                rl_path, true,
+						rl_path, compiler_options, true,
                                                 [&](const std::string &msg, const Location &loc) { throw SemanticError(msg, loc); }
                                                 ));
             ASR::Module_t *m = ASR::down_cast<ASR::Module_t>(submod_parent);
@@ -221,15 +221,15 @@ public:
         fix_type_info();
     }
 
-    void visit_Module(const AST::Module_t &x) {
+    void visit_Module(const AST::Module_t &x, const CompilerOptions &compiler_options) {
         in_module = true;
-        visit_ModuleSubmoduleCommon<AST::Module_t, ASR::Module_t>(x);
+        visit_ModuleSubmoduleCommon<AST::Module_t, ASR::Module_t>(x, compiler_options);
         in_module = false;
     }
 
-    void visit_Submodule(const AST::Submodule_t &x) {
+    void visit_Submodule(const AST::Submodule_t &x, const CompilerOptions &compiler_options) {
         in_submodule = true;
-        visit_ModuleSubmoduleCommon<AST::Submodule_t, ASR::Module_t>(x, std::string(x.m_id));
+        visit_ModuleSubmoduleCommon<AST::Submodule_t, ASR::Module_t>(x, compiler_options, std::string(x.m_id));
         in_submodule = false;
     }
 
@@ -1197,7 +1197,7 @@ public:
         }
     }
 
-    void visit_Use(const AST::Use_t &x) {
+    void visit_Use(const AST::Use_t &x, const CompilerOptions &compiler_options) {
         std::string msym = to_lower(x.m_module);
         Str msym_c; msym_c.from_str_view(msym);
         char *msym_cc = msym_c.c_str(al);
@@ -1208,7 +1208,7 @@ public:
         if (!t) {
             std::string rl_path = get_runtime_library_dir();
             t = (ASR::symbol_t*)(ASRUtils::load_module(al, current_scope->parent,
-                msym, x.base.base.loc, false, rl_path, true,
+		msym, x.base.base.loc, false, rl_path, compiler_options, true,
                 [&](const std::string &msg, const Location &loc) { throw SemanticError(msg, loc); }
                 ));
         }
