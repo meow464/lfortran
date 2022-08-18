@@ -1697,7 +1697,7 @@ public:
     }
 
     ASR::asr_t* create_GenericProcedure(const Location &loc,
-                Vec<ASR::call_arg_t>& args, ASR::symbol_t *v) {
+	Vec<ASR::call_arg_t>& args, ASR::symbol_t *v, const CompilerOptions &compiler_options) {
         if (ASR::is_a<ASR::ExternalSymbol_t>(*v)) {
             return symbol_resolve_external_generic_procedure(loc, v,
                     args);
@@ -1708,7 +1708,7 @@ public:
                     false);
             if( idx == -1 ) {
                 std::string v_name = ASRUtils::symbol_name(v);
-                v = resolve_intrinsic_function(loc, v_name);
+                v = resolve_intrinsic_function(loc, v_name, compiler_options);
                 if( !v ) {
                     throw SemanticError("Couldn't find any function " + v_name + ".",
                                         loc);
@@ -1827,7 +1827,7 @@ public:
     }
 
     ASR::asr_t* resolve_variable2(const Location &loc, const std::string &var_name,
-            const std::string &dt_name, SymbolTable*& scope) {
+	const std::string &dt_name, SymbolTable*& scope, const CompilerOptions &compiler_options) {
         ASR::symbol_t *v = scope->resolve_symbol(dt_name);
         if (!v) {
             throw SemanticError("Variable '" + dt_name + "' not declared", loc);
@@ -1883,7 +1883,7 @@ public:
                 return (ASR::asr_t*)val;
             } else if (var_name == "im") {
                 ASR::expr_t *val = ASR::down_cast<ASR::expr_t>(ASR::make_Var_t(al, loc, v));
-                ASR::symbol_t *fn_aimag = resolve_intrinsic_function(loc, "aimag");
+                ASR::symbol_t *fn_aimag = resolve_intrinsic_function(loc, "aimag", compiler_options);
                 Vec<ASR::call_arg_t> args;
                 args.reserve(al, 1);
                 ASR::call_arg_t val_arg;
