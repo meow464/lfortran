@@ -1047,7 +1047,8 @@ int compile_to_object_file_cpp(const std::string &infile,
         if (err) return err;
     }
 
-    if (!LFortran::ASRUtils::main_program_present(*asr)) {
+    if (!compiler_options.generate_object_code
+            && !LFortran::ASRUtils::main_program_present(*asr)) {
         // Create an empty object file (things will be actually
         // compiled and linked when the main program is present):
         if (compiler_options.platform == LFortran::Platform::Windows) {
