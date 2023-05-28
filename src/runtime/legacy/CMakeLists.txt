@@ -30,6 +30,6 @@ install(TARGETS lfortran_runtime
 
 # Install the header
 install(
-    FILES ../../../src/libasr/runtime/lfortran_intrinsics.h
+    FILES lfortran_intrinsics.h
     DESTINATION share/lfortran/lib/impure
 )
