@@ -13,8 +13,19 @@ CPreprocessor::CPreprocessor(CompilerOptions &compiler_options)
     CPPMacro md;
     md.expansion = "1";
     macro_definitions["__LFORTRAN__"] = md;
+
     md.expansion = "\"" + std::string(LFORTRAN_VERSION) + "\"";
     macro_definitions["__VERSION__"] = md;
+
+    md.expansion = std::string(LFORTRAN_VERSION_MAJOR);
+    macro_definitions["__VERSION_MAJOR__"] = md;
+    
+    md.expansion = std::string(LFORTRAN_VERSION_MINOR);
+    macro_definitions["__VERSION_MINOR__"] = md;
+
+    md.expansion = std::string(LFORTRAN_VERSION_PATCH);
+    macro_definitions["__VERSION_PATCH__"] = md;
+
     if (compiler_options.platform == Platform::Windows) {
         md.expansion = "1";
         macro_definitions["_WIN32"] = md;
