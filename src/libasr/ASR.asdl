@@ -170,6 +170,7 @@ abi                   -- External     ABI
 
 stmt
     = Allocate(alloc_arg* args, expr? stat, expr? errmsg, expr? source)
+    | ReAlloc(alloc_arg* args)
     | Assign(int label, identifier variable)
     | Assignment(expr target, expr value, stmt? overloaded)
     | Associate(expr target, expr value)
@@ -314,7 +315,6 @@ expr
     | ArrayMatMul(expr matrix_a, expr matrix_b, ttype type, expr? value)
     | ArrayPack(expr array, expr mask, expr? vector, ttype type, expr? value)
     | ArrayReshape(expr array, expr shape, ttype type, expr? value)
-    | ArrayMaxloc(expr array, expr? dim, expr? mask, expr? kind, expr? back, ttype type, expr? value)
     | ArrayAll(expr mask, expr? dim, ttype type, expr? value)
 
     | BitCast(expr source, expr mold, expr? size, ttype type, expr? value)
