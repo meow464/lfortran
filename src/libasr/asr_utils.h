@@ -781,10 +781,18 @@ static inline bool is_value_constant(ASR::expr_t *a_value) {
     }
     if (ASR::is_a<ASR::IntegerConstant_t>(*a_value)) {
         // OK
+    } else if (ASR::is_a<ASR::IntegerUnaryMinus_t>(*a_value)) {
+        ASR::expr_t *val = ASR::down_cast<ASR::IntegerUnaryMinus_t>(
+            a_value)->m_value;
+        return is_value_constant(val);
     } else if (ASR::is_a<ASR::UnsignedIntegerConstant_t>(*a_value)) {
         // OK
     } else if (ASR::is_a<ASR::RealConstant_t>(*a_value)) {
         // OK
+    } else if (ASR::is_a<ASR::RealUnaryMinus_t>(*a_value)) {
+        ASR::expr_t *val = ASR::down_cast<ASR::RealUnaryMinus_t>(
+            a_value)->m_value;
+        return is_value_constant(val);
     } else if (ASR::is_a<ASR::ComplexConstant_t>(*a_value)) {
         // OK
     } else if (ASR::is_a<ASR::LogicalConstant_t>(*a_value)) {
@@ -1036,6 +1044,14 @@ static inline bool extract_value(ASR::expr_t* value_expr, T& value) {
             value = (T) const_int->m_n;
             break;
         }
+        case ASR::exprType::IntegerUnaryMinus: {
+            ASR::IntegerUnaryMinus_t*
+                const_int = ASR::down_cast<ASR::IntegerUnaryMinus_t>(value_expr);
+            if (!extract_value(const_int->m_value, value)) {
+                return false;
+            }
+            break;
+        }
         case ASR::exprType::UnsignedIntegerConstant: {
             ASR::UnsignedIntegerConstant_t* const_int = ASR::down_cast<ASR::UnsignedIntegerConstant_t>(value_expr);
             value = (T) const_int->m_n;
@@ -1044,6 +1060,14 @@ static inline bool extract_value(ASR::expr_t* value_expr, T& value) {
         case ASR::exprType::RealConstant: {
             ASR::RealConstant_t* const_real = ASR::down_cast<ASR::RealConstant_t>(value_expr);
             value = (T) const_real->m_r;
+            break;
+        }
+        case ASR::exprType::RealUnaryMinus: {
+            ASR::RealUnaryMinus_t*
+                const_int = ASR::down_cast<ASR::RealUnaryMinus_t>(value_expr);
+            if (!extract_value(const_int->m_value, value)) {
+                return false;
+            }
             break;
         }
         case ASR::exprType::LogicalConstant: {
@@ -1816,6 +1840,12 @@ inline int extract_dimensions_from_ttype(ASR::ttype_t *x,
     return n_dims;
 }
 
+static inline ASR::ttype_t *extract_type(ASR::ttype_t *type) {
+    return type_get_past_array(
+            type_get_past_allocatable(
+                type_get_past_pointer(type)));
+}
+
 static inline bool is_fixed_size_array(ASR::dimension_t* m_dims, size_t n_dims) {
     if( n_dims == 0 ) {
         return false;
@@ -2401,6 +2431,16 @@ inline bool expr_equal(ASR::expr_t* x, ASR::expr_t* y) {
             ASR::Var_t* var_x = ASR::down_cast<ASR::Var_t>(x);
             ASR::Var_t* var_y = ASR::down_cast<ASR::Var_t>(y);
             return var_x->m_v == var_y->m_v;
+        }
+        case ASR::exprType::IntegerConstant: {
+            ASR::IntegerConstant_t* intconst_x = ASR::down_cast<ASR::IntegerConstant_t>(x);
+            ASR::IntegerConstant_t* intconst_y = ASR::down_cast<ASR::IntegerConstant_t>(y);
+            return intconst_x->m_n == intconst_y->m_n;
+        }
+        case ASR::exprType::RealConstant: {
+            ASR::RealConstant_t* realconst_x = ASR::down_cast<ASR::RealConstant_t>(x);
+            ASR::RealConstant_t* realconst_y = ASR::down_cast<ASR::RealConstant_t>(y);
+            return realconst_x->m_r == realconst_y->m_r;
         }
         default: {
             // Let it pass for now.

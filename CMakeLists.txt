@@ -12,6 +12,7 @@ if (LFORTRAN_BUILD_ALL)
 endif()
 
 file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/version" LFORTRAN_VERSION)
+string(REGEX MATCH "^[^\\.]*" LFORTRAN_MAJOR_VERSION ${LFORTRAN_VERSION})
 
 # Get version numbers from the git tag, if the tag is v1.2.3 we get
 # LFORTRAN_VERSION_MAJOR=1

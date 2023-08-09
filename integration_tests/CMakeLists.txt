@@ -35,7 +35,7 @@ message("LFORTRAN_BACKEND: ${LFORTRAN_BACKEND}")
 message("FAST: ${FAST}")
 
 
-macro(RUN_UTIL RUN_FAIL RUN_NAME RUN_FILE_NAME RUN_LABELS RUN_EXTRAFILES RUN_EXTRA_ARGS RUN_COPY_TO_BIN)
+macro(RUN_UTIL RUN_FAIL RUN_NAME RUN_FILE_NAME RUN_LABELS RUN_EXTRAFILES RUN_EXTRA_ARGS RUN_COPY_TO_BIN RUN_GFORTRAN_ARGS)
     set(fail ${${RUN_FAIL}})
     set(name ${${RUN_NAME}})
     set(file_name ${${RUN_FILE_NAME}})
@@ -43,6 +43,7 @@ macro(RUN_UTIL RUN_FAIL RUN_NAME RUN_FILE_NAME RUN_LABELS RUN_EXTRAFILES RUN_EXT
     set(extra_files ${${RUN_EXTRAFILES}})
     set(extra_args ${${RUN_EXTRA_ARGS}})
     set(copy_to_bin ${${RUN_COPY_TO_BIN}})
+    set(gfortran_args ${${RUN_GFORTRAN_ARGS}})
 
     if (NOT name)
         message(FATAL_ERROR "Must specify the NAME argument")
@@ -104,6 +105,10 @@ macro(RUN_UTIL RUN_FAIL RUN_NAME RUN_FILE_NAME RUN_LABELS RUN_EXTRAFILES RUN_EXT
             execute_process(COMMAND lfortran ${CMAKE_CURRENT_SOURCE_DIR}/${file_name}.f90
 				${extra_args} --implicit-typing --implicit-interface -o ${name})
             add_test(${name} ${CURRENT_BINARY_DIR}/${name})
+        elseif (LFORTRAN_BACKEND STREQUAL "llvmReAllocLHS")
+            execute_process(COMMAND lfortran ${CMAKE_CURRENT_SOURCE_DIR}/${file_name}.f90
+				${extra_args} --realloc-lhs=true -o ${name})
+            add_test(${name} ${CURRENT_BINARY_DIR}/${name})
         elseif (LFORTRAN_BACKEND STREQUAL "llvmImplicitArgument")
             execute_process(COMMAND lfortran ${CMAKE_CURRENT_SOURCE_DIR}/${file_name}.f90
 				${extra_args} --implicit-argument-casting -o ${name})
@@ -117,11 +122,8 @@ macro(RUN_UTIL RUN_FAIL RUN_NAME RUN_FILE_NAME RUN_LABELS RUN_EXTRAFILES RUN_EXT
             target_compile_options(${name} PUBLIC ${extra_args})
             add_test(${name} ${CURRENT_BINARY_DIR}/${name})
         else ()
-            if ("gfortranImplicitArgument" IN_LIST labels)
-                set(extra_args ${extra_args} -fallow-argument-mismatch)
-            endif()
             add_executable(${name} ${file_name}.f90 ${extra_files})
-            target_compile_options(${name} PUBLIC ${extra_args})
+            target_compile_options(${name} PUBLIC ${gfortran_args})
             add_test(${name} ${CURRENT_BINARY_DIR}/${name})
         endif()
 
@@ -140,30 +142,42 @@ macro(RUN_UTIL RUN_FAIL RUN_NAME RUN_FILE_NAME RUN_LABELS RUN_EXTRAFILES RUN_EXT
 endmacro(RUN_UTIL)
 
 macro(RUN)
-    set(options FAIL NOFAST)
-    set(oneValueArgs NAME INCLUDE_PATH COPY_TO_BIN)
+    set(options FAIL NOFAST CPP_PRE IMPLICIT_ARGS)
+    set(oneValueArgs NAME INCLUDE_PATH  COPY_TO_BIN)
     set(multiValueArgs LABELS EXTRAFILES)
     cmake_parse_arguments(RUN "${options}" "${oneValueArgs}"
                         "${multiValueArgs}" ${ARGN} )
 
     set(RUN_EXTRA_ARGS "")
     set(RUN_FILE_NAME ${RUN_NAME})
+    set(RUN_GFORTRAN_ARGS "")
 
     if (RUN_INCLUDE_PATH)
         # Only one include path supported for now
         # Later add support for multiple include paths by looping over and appending to extra args
         set(RUN_EXTRA_ARGS ${RUN_EXTRA_ARGS} -I${CMAKE_CURRENT_SOURCE_DIR}/${RUN_INCLUDE_PATH})
+        set(RUN_GFORTRAN_ARGS ${RUN_GFORTRAN_ARGS} -I${CMAKE_CURRENT_SOURCE_DIR}/${RUN_INCLUDE_PATH})
+    endif()
+
+    if (RUN_CPP_PRE)
+        set(RUN_EXTRA_ARGS ${RUN_EXTRA_ARGS} "--cpp")
+        set(RUN_GFORTRAN_ARGS ${RUN_GFORTRAN_ARGS} "-cpp")
+    endif()
+
+    if (RUN_IMPLICIT_ARGS)
+        set(RUN_EXTRA_ARGS ${RUN_EXTRA_ARGS} "--implicit-argument-casting")
+        set(RUN_GFORTRAN_ARGS ${RUN_GFORTRAN_ARGS} "-fallow-argument-mismatch")
     endif()
 
     if (NOT FAST)
-        RUN_UTIL(RUN_FAIL RUN_NAME RUN_FILE_NAME RUN_LABELS RUN_EXTRAFILES RUN_EXTRA_ARGS RUN_COPY_TO_BIN)
+        RUN_UTIL(RUN_FAIL RUN_NAME RUN_FILE_NAME RUN_LABELS RUN_EXTRAFILES RUN_EXTRA_ARGS RUN_COPY_TO_BIN RUN_GFORTRAN_ARGS)
     endif()
 
     if ((FAST) AND (NOT RUN_NOFAST))
         set(RUN_EXTRA_ARGS ${RUN_EXTRA_ARGS} --fast)
         set(RUN_NAME "${RUN_NAME}_FAST")
         list(REMOVE_ITEM RUN_LABELS gfortran) # remove gfortran from --fast test
-        RUN_UTIL(RUN_FAIL RUN_NAME RUN_FILE_NAME RUN_LABELS RUN_EXTRAFILES RUN_EXTRA_ARGS RUN_COPY_TO_BIN)
+        RUN_UTIL(RUN_FAIL RUN_NAME RUN_FILE_NAME RUN_LABELS RUN_EXTRAFILES RUN_EXTRA_ARGS RUN_COPY_TO_BIN RUN_GFORTRAN_ARGS)
     endif()
 endmacro(RUN)
 
@@ -226,6 +240,7 @@ RUN(NAME data_05 LABELS gfortran) # llvmImplicit removed
 RUN(NAME data_06 LABELS gfortran llvm)
 RUN(NAME data_07 LABELS gfortran) # TODO: Fix this test
 RUN(NAME data_08 LABELS gfortran llvmImplicit NOFAST)
+RUN(NAME data_09 LABELS gfortran llvm)
 RUN(NAME minmax_01 LABELS gfortran llvm wasm)
 RUN(NAME arithmetic_if_01 LABELS gfortran llvm) # arithmetic tests use goto
 RUN(NAME arithmetic_if_02 LABELS gfortran llvm)
@@ -332,12 +347,13 @@ RUN(NAME arrays_op_7 LABELS gfortran llvm wasm)
 RUN(NAME arrays_op_8 LABELS gfortran llvm)
 RUN(NAME arrays_op_9 LABELS gfortran llvm)
 RUN(NAME arrays_op_10 LABELS gfortran llvm wasm)
-RUN(NAME arrays_op_11 LABELS gfortran llvm)
+RUN(NAME arrays_op_11 LABELS gfortran llvmReAllocLHS)
 RUN(NAME arrays_op_13 LABELS gfortran llvm wasm)
 RUN(NAME arrays_op_14 LABELS gfortran llvm wasm)
 RUN(NAME arrays_op_15 LABELS gfortran llvm)
 RUN(NAME arrays_op_16 LABELS gfortran llvm)
 RUN(NAME arrays_op_17 LABELS gfortran llvm)
+RUN(NAME arrays_op_18 LABELS gfortran llvmReAllocLHS)
 RUN(NAME arrays_reshape_14 LABELS gfortran llvm)
 RUN(NAME arrays_elemental_15 LABELS gfortran llvm)
 RUN(NAME arrays_03_func LABELS gfortran cpp llvm wasm  NOFAST)
@@ -355,7 +371,7 @@ RUN(NAME arrays_24 LABELS gfortran llvm)
 RUN(NAME arrays_25 LABELS gfortran llvm)
 RUN(NAME arrays_26 LABELS gfortran llvm)
 RUN(NAME arrays_27 LABELS gfortran llvm)
-RUN(NAME arrays_28 LABELS gfortran llvm)
+RUN(NAME arrays_28 LABELS gfortran llvm) # maxloc, minloc
 RUN(NAME arrays_29 LABELS gfortran llvm NOFAST)
 
 
@@ -480,6 +496,8 @@ RUN(NAME intrinsics_58 LABELS gfortran llvm) # sign
 RUN(NAME intrinsics_59 LABELS gfortran llvm) # sign
 RUN(NAME intrinsics_60 LABELS gfortran llvm COPY_TO_BIN intrinsics_60_data.txt) # iachar for extended ascii
 RUN(NAME intrinsics_61 LABELS gfortran llvm) # char
+RUN(NAME intrinsics_62 LABELS gfortran llvm) # shape
+RUN(NAME intrinsics_63 LABELS gfortran llvm)
 
 RUN(NAME parameter_01 LABELS gfortran)
 RUN(NAME parameter_02 LABELS gfortran)
@@ -954,7 +972,7 @@ RUN(NAME procedure_04 LABELS gfortran llvm)
 RUN(NAME allocated_01 LABELS gfortran llvm)
 RUN(NAME allocated_02 LABELS gfortran llvm)
 RUN(NAME allocated_03 LABELS gfortran llvm)
-RUN(NAME allocate_07 LABELS gfortran llvm)
+RUN(NAME allocate_07 LABELS gfortran llvmReAllocLHS)
 RUN(NAME allocate_08 LABELS gfortran llvm)
 RUN(NAME allocate_09 LABELS gfortran llvm)
 
@@ -1004,6 +1022,8 @@ RUN(NAME implicit_argument_casting_01 LABELS llvmImplicitArgument)
 
 RUN(NAME arrayitem_01 LABELS gfortran llvm)
 
-RUN(NAME implicit_argument_casting_01 LABELS gfortranImplicitArgument llvmImplicitArgument)
+RUN(NAME implicit_argument_casting_01 LABELS gfortran IMPLICIT_ARGS)
 
 RUN(NAME specfun_01 LABELS gfortran llvmUseLoopVariableAfterLoop NOFAST)
+
+RUN(NAME cpp_pre_01 LABELS gfortran llvm c CPP_PRE)
